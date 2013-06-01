@@ -1,0 +1,45 @@
+@import 'colors';
+
+html * {
+    color-profile: sRGB;
+    rendering-intent: auto;
+}
+
+body {
+  background: $color-background;
+  color: $color-text;
+}
+
+.code {
+
+  line-height: 1.3em;
+ 
+  .keyword {
+    font-weight: bold;  
+  }
+
+  .constant {
+    color: $color-text-highlight;
+  }
+
+  .comment {
+    color: $color-text-hide;
+  }
+
+  .punctuator {
+    color: $color-text-hide;
+  }
+
+  .function { }
+
+  .level0 { color: $color-level0; }
+  .level1 { color: $color-level1; }
+  .level2 { color: $color-level2; }
+  .level3 { color: $color-level3; }
+  .level4 { color: $color-level4; }
+  .level5 { color: $color-level5; }
+  .level6 { color: $color-level6; }
+  .level7 { color: $color-level7; }
+  .level8 { color: $color-level8; }
+
+}

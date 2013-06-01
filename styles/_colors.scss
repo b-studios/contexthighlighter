@@ -1,0 +1,52 @@
+/**
+ * This file is part of "Context Highlighter".
+ *
+ * "Context Highlighter" is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
+ *
+ * "Context Highlighter" is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+ *
+ * You should have received a copy of the GNU General Public License
+ * along with "Context Highlighter".  If not, see <http://www.gnu.org/licenses/>.
+ *
+ * Color Scheme: Solarized
+ * -----------------------
+ * Colors by Ethan Schoonover
+ * http://ethanschoonover.com/solarized
+ */
+
+/*
+// bright
+$color-background: #fdf6e3;
+$color-background-highlight: #eee8d5;
+
+$color-text: #073642;
+$color-text-highlight: #586e75;
+$color-text-hide: #93a1a1;
+*/
+
+// dark
+$color-background: #073642;
+$color-background-highlight: #586e75;
+
+$color-text: #93a1a1;
+$color-text-highlight: #839496;
+$color-text-hide: #586e75;
+
+// general
+$color-text-invert: #eee8d5;
+
+$color-level0: $color-text;
+$color-level1: #b58900;
+$color-level2: #cb4b16;
+$color-level5: #dc322f;
+$color-level4: #d33682;
+$color-level3: #6c71c4;
+$color-level6: #268bd2;
+$color-level7: #2aa198;
+$color-level8: #859900;
