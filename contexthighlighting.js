@@ -23,7 +23,7 @@
  * 2. search for identifier (register boundInstances)
  *
  * @author Jonathan Brachthäuser
- *
+ */
 /*global require:true */
 var parser = require('esprima'),
     fs = require('fs');
@@ -119,9 +119,7 @@ function performBindingAnalysis(ast) {
       
         // it's a named function expression
         else if (!!node.id)
-          newEnv.addBindingInstance(node.id.name, node.id)  
-
-        
+          newEnv.addBindingInstance(node.id.name, node.id)
         
         // the parameters are bound by the function
         for (i = 0; i < node.params.length; i++)
@@ -169,9 +167,9 @@ function performBindingAnalysis(ast) {
         analyzeBoundInstances(node.body, node.bindings);
         analyzeBoundInstances(node.id, node.bindings); 
 
-        for (i = 0; i < node.params.length; i++) 
-          analyzeBoundInstances(node.params[i], env);
-
+        for (i = 0; i < node.params.length; i++) {
+          node.params[i].boundIn = node.bindings
+        }
         break;
           
       // skip the names of object - properties
@@ -199,6 +197,7 @@ function performBindingAnalysis(ast) {
   }
 
   var globalEnv = new Environment(ast, undefined)
+  ast.scope_id = 'globalscope'
   ast.bindings = globalEnv
   analyzeBindingInstances(ast, globalEnv)
   analyzeBoundInstances(ast, globalEnv)
@@ -335,6 +334,13 @@ function toHtmlString(ast, rawText) {
     return slices;
   }
 
+  var uniqueId = (function() {
+    var counter = 0;
+    return function(name) {
+      return [name,"_", counter++].join('')
+    }
+  }).call()
+
   function toText(node) {
 
     if (!node || !node.type)
@@ -344,15 +350,17 @@ function toHtmlString(ast, rawText) {
 
       case 'FunctionDeclaration':
       case 'FunctionExpression':
+        var scope_id = uniqueId("scope");
+        node.scope_id = scope_id;
         var slice = mergeParts(node.range, allToText([node.id, node.body].concat(node.params)));
-        return new Slice(node.range, "<span class='function level" + node.bindings.level() + "'>" + slice.contents + "</span>");
+        return new Slice(node.range, "<span id='" + scope_id + "' class='function level" + node.bindings.level() + "'>" + slice.contents + "</span>");
 
       case 'Identifier':
         if (!node.boundIn) 
           return new Slice(node.range, "<span class='id'>" + sliceWithTokens(node.range) + "</span>")
-        else
-          return new Slice(node.range, "<span class='id level" + node.boundIn.level() + "'>" + sliceWithTokens(node.range) + "</span>");
-
+        else {
+          return new Slice(node.range, "<span data-scope='" + node.boundIn.scope.scope_id + "' class='id level" + node.boundIn.level() + "'>" + sliceWithTokens(node.range) + "</span>");
+        }
 
       // nothing special happens here
       case 'Program':

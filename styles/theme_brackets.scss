@@ -1,0 +1,80 @@
+@import 'colors';
+
+html * {
+    color-profile: sRGB;
+    rendering-intent: auto;
+}
+
+body {
+  background: $color-background;
+  color: $color-text;
+}
+
+.code {
+
+  position: relative;
+  padding-left: 2em;
+
+  .bracket {
+    position: absolute;
+    display: block;
+    width: 95%;
+    //background: rgba(240, 240, 240, 0.2);
+    border-left: 1.5px solid $color-background-highlight;
+    border-radius: 4px;
+    z-index: -1;
+    -webkit-transition: background 1s;
+  }
+
+  .bracket.show-scope {
+    background: mix($color-background, $color-background-highlight, 80%);
+    -webkit-transition: background 0.4s;
+  }
+
+  line-height: 1.3em;
+ 
+  .keyword {
+    font-weight: bold;  
+  }
+
+  .constant {
+    color: $color-text-highlight;
+  }
+
+  .comment {
+    color: $color-text-hide;
+  }
+
+  .punctuator {
+    color: $color-text-hide;
+  }
+
+  .function { }
+
+  .bracket {
+    //&.level0 { border-color: $color-level0; }
+    &.level1 { border-color: $color-level1; }
+    &.level2 { border-color: $color-level2; }
+    &.level3 { border-color: $color-level3; }
+    &.level4 { border-color: $color-level4; }
+    &.level5 { border-color: $color-level5; }
+    &.level6 { border-color: $color-level6; }
+    &.level7 { border-color: $color-level7; }
+    &.level8 { border-color: $color-level8; }
+  }
+
+  .id {
+    &.level1, &.level2, &.level3, &.level4, &.level5, &.level6, &.level7, &.level8̛ {
+      cursor: help;
+    }
+
+    &.level1 { color: $color-level1; }
+    &.level2 { color: $color-level2; }
+    &.level3 { color: $color-level3; }
+    &.level4 { color: $color-level4; }
+    &.level5 { color: $color-level5; }
+    &.level6 { color: $color-level6; }
+    &.level7 { color: $color-level7; }
+    &.level8 { color: $color-level8; }
+  }
+}

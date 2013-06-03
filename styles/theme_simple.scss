@@ -12,6 +12,10 @@ body {
 
 .code {
 
+  .show-scope {
+    background: mix($color-background, $color-background-highlight, 50%);
+  }
+
   line-height: 1.3em;
  
   .keyword {
