@@ -22,7 +22,7 @@
  * 1. search for declarations and functions (register bindingInstances)
  * 2. search for identifier (register boundInstances)
  *
- * @author Jonathan Brachthäuser
+ * @author Jonathan Brachthaeuser
  */
 /*global require:true */
 var parser = require('esprima'),
@@ -111,8 +111,9 @@ function performBindingAnalysis(ast) {
       case 'FunctionExpression':
 
         // create a new binding environment (function scope)
-        newEnv = new Environment(node, env)
-        node.bindings = newEnv
+        newEnv = new Environment(node, env);
+        node.bindings = newEnv;
+        env.addBindingInstance('arguments', node);
 
         if (node.type === 'FunctionDeclaration')
           env.addBindingInstance(node.id.name, node.id)
@@ -176,6 +177,10 @@ function performBindingAnalysis(ast) {
       case 'Property':
         analyzeBoundInstances(node.value, env);
         break;
+
+      case 'ThisExpression':
+        node.boundIn = env.addBoundInstance('this', node);
+      break;
 
       // don't analze bindings of member expression id that are not computed like `bar` in `foo.bar`
       case 'MemberExpression':
@@ -356,6 +361,7 @@ function toHtmlString(ast, rawText) {
         return new Slice(node.range, "<span id='" + scope_id + "' class='function level" + node.bindings.level() + "'>" + slice.contents + "</span>");
 
       case 'Identifier':
+      case 'ThisExpression':
         if (!node.boundIn) 
           return new Slice(node.range, "<span class='id'>" + sliceWithTokens(node.range) + "</span>")
         else {
