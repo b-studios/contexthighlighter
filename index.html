@@ -1,0 +1,209 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <link rel="stylesheet" type="text/css" href="vendor/codemirror/codemirror.css"></link>
+  <link rel="stylesheet" type="text/css" href="styles/theme_brackets.css"></link>
+  <script src="http://code.jquery.com/jquery-1.10.1.js"></script>
+  <script src="vendor/esprima/esprima.js"></script>
+  <script src="vendor/codemirror/codemirror.js"></script>
+  <script src="vendor/codemirror/javascript.js"></script>
+  <script src="util.js"></script>
+  <script src="visitor.js"></script>
+  <script src="bindinganalyzer.js"></script>
+  <script src="htmlconverter.js"></script>
+</head>
+<body>
+<div id="cmeditor"></div>
+<script>
+  $(function(){
+    
+    var id_count = 0;
+
+    var editor = CodeMirror($('#cmeditor').get(0), {
+      mode: 'javascript',
+      theme: 'monochrome',
+      viewportMargin: 10,
+      lineNumbers: true,
+      gutters: ['CodeMirror-linenumbers', 'brackets']
+    });
+
+    //editor.setSize(1400, 800);
+
+    var doc = editor.getDoc();
+
+    var parser = new Worker('parser.js'),
+        running = false;
+    function parse(string, callback) {
+      
+      if (running) {
+        // kill current parser thread - this is important
+        // since it also prevents our callback to be called and therefore prevents 
+        // outdated display-updates
+        parser.terminate();        
+        // spawn a new one
+        parser = new Worker('parser.js');
+        running = false;
+      }
+      
+      parser.onmessage = function() {
+        running = false;
+        callback.apply(null, arguments);
+      }
+      running = true;
+      parser.postMessage(string);
+    }
+
+    
+
+    var functions = [],
+        identifiers = [];
+
+    var bracketContainer = $('.CodeMirror-gutter.brackets')
+
+    editor.on('change', function() {
+      parse(doc.getValue(), processAST);
+    });
+
+    editor.on('viewportChange', function() {
+      editor.operation(drawBrackets);
+    });
+
+    // we received the results from the parser
+    function processAST(e) {
+
+      var ast = e.data;
+
+      ast = bindingAnalyzer(ast);
+
+      // this is used for function declarations and expressions
+      function collectFunction(id, params, defaults, rest, body) {
+        this.from = doc.posFromIndex(this.range[0]);
+        this.to = doc.posFromIndex(this.range[1]);
+        return [this].concat(rangeCollector.traverseAll(id, params, body));
+      }
+
+      // only returns those ranges of identifiers and functions we are interested in
+      // (Node | [Node]) => [Range]
+      var rangeCollector = Visitor({
+        'FunctionDeclaration': collectFunction,
+        'FunctionExpression': collectFunction,
+        'Identifier': function() {
+          if (!!this.boundIn) {
+             this.from = doc.posFromIndex(this.range[0]);
+             this.to = doc.posFromIndex(this.range[1]);
+             return [this];
+          }
+        }
+      }, function(arr1, arr2) {
+        if (arr1 === undefined)
+          return arr2
+
+        if (arr2 === undefined)
+          return arr1
+
+        return arr1.concat(arr2)
+      });
+
+      var ranges = rangeCollector.traverse(ast) || [];
+
+      functions = ranges.filter(function(node) {
+        return !!node && (node.type === 'FunctionDeclaration' || node.type === 'FunctionExpression');
+      });
+
+      identifiers = ranges.filter(function(node) {
+        return !!node && node.type === 'Identifier';
+      });
+
+      //editor.operation(function() {
+        drawBrackets();
+        markIdentifier();
+        editor.refresh();
+      //});
+    }
+
+    function drawBrackets() {
+
+      var viewport = editor.getViewport(),
+          visibleStart = viewport.from,
+          visibleEnd = viewport.to;
+
+      bracketContainer.find('.bracket').remove();
+      
+      $(functions).each(function(i, fun) {
+
+        var start = fun.from.line, end = fun.to.line;
+        
+        // not visible, don't bother to render it
+        if (end < visibleStart || start > visibleEnd)
+          return;
+
+        var startOffset = editor.charCoords(fun.from, 'local').top,
+            endOffset = editor.charCoords(fun.to, 'local').top;
+            
+        var bracket = $('<span>', {
+          'class': 'bracket level' + fun.bindings.level()
+        }).css({
+          top: startOffset,
+          height: endOffset - startOffset + editor.defaultTextHeight()
+        });
+        fun.bracket = bracket.get();
+        bracketContainer.append(bracket);        
+      });
+    }
+
+    function markIdentifier() {
+      $(doc.getAllMarks()).each(function(i, el) { 
+        el.clear();
+      });
+
+      $(identifiers).each(function(i, el) {
+
+        var level = el.boundIn.level();
+
+        // this is really ugly. Finding the marked identifier through a unique class...
+        // when using replaceWith the result is atomic which is not the desired behaviour
+        var id = 'id_' + id_count++;
+        var mark = doc.markText(el.from, el.to, {
+          className: 'id level' + level + ' ' + id
+        });
+
+        // connect the dom id to ast
+        el.className = id;
+
+        if (level !== 0) {
+
+
+          CodeMirror.on(mark, 'beforeCursorEnter', function() {
+            
+            var highlightMarks = [];
+
+            // show scope
+            $(el.boundIn.scope.bracket).clearQueue().queue(function() {
+              $(this).addClass('show-scope');              
+              $(this).dequeue();
+            }).delay(2000).queue(function() {
+              $(this).removeClass('show-scope');
+              $(this).dequeue();
+            });
+
+            // highlight all bound instances
+            /*var other = $(el.boundIn.bindings[el.name].boundInstances).each(function(i, boundId) {
+              $('.level' + level + '.' + boundId.className).clearQueue().queue(function() {
+                $(this).addClass('highlight-bound');
+                $(this).dequeue();
+              }).delay(1500).queue(function() {
+                $(this).removeClass('highlight-bound');
+                $(this).dequeue();
+              });
+            });*/
+
+            return false;
+          })
+        }
+      });
+    }
+
+});
+</script>
+</body>
+</html>

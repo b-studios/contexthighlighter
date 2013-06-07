@@ -1,28 +1,87 @@
 @import 'colors';
 
 html * {
-    color-profile: sRGB;
-    rendering-intent: auto;
+  color-profile: sRGB;
+  rendering-intent: auto;
 }
 
-body {
-  background: $color-background;
+html {
+  height: 100%;
+}
+
+html, body {
+  padding: 0;
+  margin: 0;
+  height: 100%;
+  width: 100%;
+  background: lighten($color-background-highlight, 10%);
+}
+
+
+// code mirror
+#cmeditor {
+  height: 100%;
+}
+
+.cm-s-monochrome.CodeMirror { 
+  background: $color-background; 
   color: $color-text;
+  display: block;
+  margin: 0;
+  padding: 0;
+  line-height: 1.2em;
+  height: 100%;
+}
+.cm-s-monochrome div.CodeMirror-selected { background: $color-background-highlight !important; }
+.cm-s-monochrome .CodeMirror-gutters { background: $color-background-highlight; border-right: 1px solid mix($color-background-highlight, $color-background, 70%); }
+.cm-s-monochrome .CodeMirror-linenumber { color: $color-text; }
+.cm-s-monochrome .CodeMirror-cursor { border-left: 1px solid white !important; }
+
+.cm-s-monochrome .cm-keyword { color: $color-text; font-weight: bold; }
+.cm-s-monochrome .cm-atom {color: $color-text-highlight; }
+.cm-s-monochrome .cm-number {color: $color-text-highlight; }
+.cm-s-monochrome .cm-def {color: $color-text-highlight; }
+.cm-s-monochrome .cm-variable { color: $color-text; }
+.cm-s-monochrome .cm-variable-2 { color: $color-text; }
+.cm-s-monochrome .cm-variable-3 { color: $color-text; }
+.cm-s-monochrome .cm-property { color: $color-text; }
+.cm-s-monochrome .cm-operator {color: $color-text-hide; }
+.cm-s-monochrome .cm-comment {color: $color-text-hide; }
+.cm-s-monochrome .cm-string {color: $color-text-highlight; }
+.cm-s-monochrome .cm-string-2 {color: $color-text-highlight; }
+.cm-s-monochrome .cm-meta {color: $color-text-hide;}
+.cm-s-monochrome .cm-error {color: #f00;}
+.cm-s-monochrome .cm-qualifier { color: $color-text; font-weight: bold; }
+.cm-s-monochrome .cm-builtin { color: $color-text-hide; }
+.cm-s-monochrome .cm-bracket { color: $color-text-hide; }
+.cm-s-monochrome .cm-tag { color: $color-text-hide; }
+
+.cm-s-monochrome .cm-attribute { color: inherit; }
+.cm-s-monochrome .cm-header { color: inherit; }
+.cm-s-monochrome .cm-quote { color: inherit; }
+.cm-s-monochrome .cm-hr {color: inherit;}
+.cm-s-monochrome .cm-link {color: inherit;}
+
+.cm-s-monochrome .brackets {
+  width: 25px;
+  background: $color-background; 
+  position: relative;
 }
 
-.code {
+//.code {
 
-  position: relative;
-  padding-left: 2em;
-
+ // position: relative;
+  //padding-left: 2em;
+// line-height: 1.3em;
   .bracket {
     position: absolute;
     display: block;
-    width: 95%;
-    //background: rgba(240, 240, 240, 0.2);
-    border-left: 1.5px solid $color-background-highlight;
+    width: 5px;
+    //width: 95%;
+    border: 1.5px solid $color-background-highlight;
+    border-right: none;
     border-radius: 4px;
-    z-index: -1;
+    //z-index: 0;
     -webkit-transition: background 1s;
   }
 
@@ -35,7 +94,7 @@ body {
     transition: background 0.4s;
   }
 
-  line-height: 1.3em;
+  
  
   .keyword {
     font-weight: bold;  
@@ -57,19 +116,38 @@ body {
 
   .bracket {
     //&.level0 { border-color: $color-level0; }
-    &.level1 { border-color: $color-level1; }
-    &.level2 { border-color: $color-level2; }
-    &.level3 { border-color: $color-level3; }
-    &.level4 { border-color: $color-level4; }
-    &.level5 { border-color: $color-level5; }
-    &.level6 { border-color: $color-level6; }
-    &.level7 { border-color: $color-level7; }
-    &.level8 { border-color: $color-level8; }
+    &.level1 { border-color: $color-level1; left: 5px;  width: 20px; }
+    &.level2 { border-color: $color-level2; left: 8px; width: 17px; }
+    &.level3 { border-color: $color-level3; left: 11px; width: 14px; }
+    &.level4 { border-color: $color-level4; left: 14px; width: 11px; }
+    &.level5 { border-color: $color-level5; left: 17px; width: 8px; }
+    &.level6 { border-color: $color-level6; left: 17px; width: 5px; }
+    &.level7 { border-color: $color-level7; left: 20px; width: 3px; }
+    &.level8 { border-color: $color-level8; left: 23px; width: 1px; }
   }
 
   .id {
+
+    //border: 1px solid transparent;
+    //border-radius: 3px;
+    -webkit-transition: border-color 1s;
+    -moz-transition: border-color 1s;
+    -o-transition: border-color 1s;
+    -ms-transition: border-color 1s;
+    transition: border-color 1s;
+
     &.level1, &.level2, &.level3, &.level4, &.level5, &.level6, &.level7, &.level8̛ {
       cursor: help;
+    }
+
+    &.highlight-bound { 
+      border-color: $color-text-highlight;
+      -webkit-transition: border-color 0.4s;
+      -moz-transition: border-color 0.4s;
+      -o-transition: border-color 0.4s;
+      -ms-transition: border-color 0.4s;
+      transition: border-color 0.4s;
+      
     }
 
     &.level1 { color: $color-level1; }
@@ -81,4 +159,4 @@ body {
     &.level7 { color: $color-level7; }
     &.level8 { color: $color-level8; }
   }
-}
+//}
