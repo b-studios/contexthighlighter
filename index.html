@@ -3,21 +3,34 @@
 <head>
   <link rel="stylesheet" type="text/css" href="vendor/codemirror/codemirror.css"></link>
   <link rel="stylesheet" type="text/css" href="styles/theme_brackets.css"></link>
-  <script src="http://code.jquery.com/jquery-1.10.1.js"></script>
+  <script src="vendor/jquery/jquery-1.10.1.js"></script>
   <script src="vendor/esprima/esprima.js"></script>
+  <script src="vendor/estraverse/estraverse.js"></script>
   <script src="vendor/codemirror/codemirror.js"></script>
   <script src="vendor/codemirror/javascript.js"></script>
   <script src="util.js"></script>
-  <script src="visitor.js"></script>
   <script src="bindinganalyzer.js"></script>
   <script src="htmlconverter.js"></script>
+  <script src="mode.js"></script>
 </head>
 <body>
 <div id="cmeditor"></div>
 <script>
+
+/**
+* TODO: 
+* 1. also update brackets after the current scope, since they have to be moved
+* 2. use function scope to display selected functions in a different (linked) document like codebubbles
+*/
   $(function(){
     
-    var id_count = 0;
+    var id_count = 0,
+        functions = [],
+        identifiers = [],
+        oldMarks = [],
+        ast = undefined,
+        listeners = {},
+        bracketContainer = $('.CodeMirror-gutter.brackets');
 
     var editor = CodeMirror($('#cmeditor').get(0), {
       mode: 'javascript',
@@ -32,9 +45,21 @@
     var doc = editor.getDoc();
 
     var parser = new Worker('parser.js'),
-        running = false;
-    function parse(string, callback) {
+        running = false,
+        cleanup = undefined;
+
+    function parse(string, callback, change) {
       
+      if (!!cleanup) {
+        cleanup = window.clearTimeout(cleanup)
+        return parseFull(string, callback);
+      }
+
+      // find next functionscope in edit range
+      var fromIdx = doc.indexFromPos(change.from); // let's start to work just with one position and not a selection range
+
+      var fun = findPathToPos(fromIdx, ast);
+
       if (running) {
         // kill current parser thread - this is important
         // since it also prevents our callback to be called and therefore prevents 
@@ -44,99 +69,261 @@
         parser = new Worker('parser.js');
         running = false;
       }
-      
-      parser.onmessage = function() {
-        running = false;
-        callback.apply(null, arguments);
+
+      if (!!fun) {
+        parsePartial(string, fun, change, callback);
+      } else {
+        parseFull(string, callback);
       }
+    }
+
+    function parseFull(string, callback) {
+
+      parser.onmessage = function(e) {
+        running = false;
+        clean = true;
+        callback.call(null, e.data, ast);
+      }
+      parser.onerror = function(e) {
+        running = false;
+        clean = false;
+      }
+
+      // start parser
       running = true;
       parser.postMessage(string);
     }
 
+    function parsePartial(string, context, change, callback) {
+
+      var start = context.range[0],
+          posChange = calculateChangeLength(change),
+          end = context.range[1] + posChange,
+          textSlice = string.slice(start, end),
+          functionExpr = false;
+
+      if (context.type === "FunctionExpression") {
+        textSlice = ['(',textSlice,')'].join('');
+        functionExpr = true
+      }
+
+      // if it yields an error we have to flag it as error state, wait 
+      // some time and reparse with full string to recover
+      parser.onmessage = function(e) {
+        running = false;
+        clean = true;
+
+        var partialAst, idxCorr;
+
+        if (functionExpr) {
+          // Program(GroupExpr(...))
+          partialAst = e.data.body[0].expression;
+          idxCorr = start - 1;
+        } else {
+          // Program(...)
+          partialAst = e.data.body[0];
+          idxCorr = start;
+        }
+
+
+        // we have to postprocess all position data to match the original position
+        estraverse.traverse(partialAst, {
+          enter: function(node) {
+            node.range = [node.range[0] + idxCorr, node.range[1] + idxCorr]
+          }
+        });
+
+
+        // now replace function node in ast
+        ast = estraverse.replace(ast, {
+          haveSeenFunction: false,
+
+          enter: function(node) {
+            if (node === context) {
+              this.visitor.haveSeenFunction = true;
+              this.skip();
+              return partialAst;
+            }
+
+            if (this.visitor.haveSeenFunction) {
+              node.range = [node.range[0] + posChange, node.range[1] + posChange]                
+            }
+            return node
+          }
+        });
+
+        // now invalidate only identifiers and functions inside of fun
+        callback.call(null, ast, context, partialAst);
+      }
+      parser.onerror = function(e) {
+        running = false;
+        if (!cleanup) {
+          cleanup = window.setTimeout(function() {
+            parseFull(string, callback);
+          }, 120);
+        }
+      }
+
+      // start parser
+      running = true;      
+      parser.postMessage(textSlice);
+    }
+
+    function calculateChangeLength(change) {
+      var length = change.text.join('\n').length - change.removed.join('\n').length
+      if (!!change.next)
+        return length + calculateChangeLength(change.next);
+      else
+        return length;
+    }
+
+    function isFunction(node) {
+      return node.type === 'FunctionExpression' || node.type === 'FunctionDeclaration';
+    }
+
+    function findPathToPos(pos, ast) {
+
+      var found = undefined;
+      estraverse.traverse(ast, {
+
+        enter: function(node) {
+          if (node.range[0] > pos)
+            return this.break();
+
+          if (isFunction(node) && pos >= node.range[0] && pos < node.range[1])
+            found = node
+        }
+      });
+      return found;
+    }
     
 
-    var functions = [],
-        identifiers = [];
 
-    var bracketContainer = $('.CodeMirror-gutter.brackets')
-
-    editor.on('change', function() {
-      parse(doc.getValue(), processAST);
+    editor.on('change', function(editor, change) {
+      parse(doc.getValue(), processAST, change);
     });
 
     editor.on('viewportChange', function() {
-      editor.operation(drawBrackets);
+      //editor.operation(function() {
+        drawBrackets();
+        markIdentifier();        
+      //});
     });
 
+    /*editor.on('renderLine', function(editor, line, dom) {
+      
+      return true
+
+      var id = token.className.match(/id_\d+/)
+      if (!id)
+        return false;
+
+      var listener = listeners[id]
+      if (typeof listener === 'function')
+        listener.call(null, token);
+    });
+*/
     // we received the results from the parser
-    function processAST(e) {
+    function processAST(parsed, oldAst, partialAst) {
 
-      var ast = e.data;
+      ast = parsed;
 
-      ast = bindingAnalyzer(ast);
-
-      // this is used for function declarations and expressions
-      function collectFunction(id, params, defaults, rest, body) {
-        this.from = doc.posFromIndex(this.range[0]);
-        this.to = doc.posFromIndex(this.range[1]);
-        return [this].concat(rangeCollector.traverseAll(id, params, body));
+      if (!!partialAst) {
+        bindingAnalyzer(partialAst, oldAst.bindings.parent)
+      } else {
+        bindingAnalyzer(ast);
       }
+
+      functions = [], identifiers = [];
 
       // only returns those ranges of identifiers and functions we are interested in
       // (Node | [Node]) => [Range]
-      var rangeCollector = Visitor({
-        'FunctionDeclaration': collectFunction,
-        'FunctionExpression': collectFunction,
-        'Identifier': function() {
-          if (!!this.boundIn) {
-             this.from = doc.posFromIndex(this.range[0]);
-             this.to = doc.posFromIndex(this.range[1]);
-             return [this];
+      estraverse.traverse(partialAst || ast, {
+        enter: function(node) {
+
+          switch (node.type) {
+            case 'FunctionDeclaration':
+            case 'FunctionExpression':
+              node.from = doc.posFromIndex(node.range[0]);
+              node.to = doc.posFromIndex(node.range[1]);
+              functions.push(node);
+              break;
+
+            case 'Identifier':
+              if (!!node.boundIn) {
+                node.from = doc.posFromIndex(node.range[0]);
+                node.to = doc.posFromIndex(node.range[1]);
+                identifiers.push(node);
+              }
+              break;
           }
         }
-      }, function(arr1, arr2) {
-        if (arr1 === undefined)
-          return arr2
-
-        if (arr2 === undefined)
-          return arr1
-
-        return arr1.concat(arr2)
       });
 
-      var ranges = rangeCollector.traverse(ast) || [];
+      if (!!oldAst) {
+        estraverse.traverse(oldAst, {
+          enter: function(node) {
+            switch (node.type) {
+              case 'FunctionDeclaration':
+              case 'FunctionExpression':
+                node.data && node.data.bracket && node.data.bracket.remove();
+                break;
 
-      functions = ranges.filter(function(node) {
-        return !!node && (node.type === 'FunctionDeclaration' || node.type === 'FunctionExpression');
-      });
+              case 'Identifier':
+                node.data && node.data.mark && node.data.mark.clear();
+                break;
+            }
+          }
+        })
+      }
 
-      identifiers = ranges.filter(function(node) {
-        return !!node && node.type === 'Identifier';
-      });
+      /*bracketContainer.find('.bracket').remove();
+      $('.CodeMirror-sizer .vars-in-scope').remove();
+*/
 
       //editor.operation(function() {
-        drawBrackets();
-        markIdentifier();
-        editor.refresh();
+      drawBrackets();
+      markIdentifier();
       //});
+    }
+
+    function addWidget(fun) {
+      var widget = document.createElement('div');
+      $(widget).addClass('vars-in-scope');
+      for (var key in fun.bindings.bindings) {
+        if (key === 'arguments' || key === 'this')
+          continue;
+
+        $(widget).append($('<span>', {
+          html: key,
+          'class': 'binding'
+        }));
+      }
+      editor.addWidget(fun.from, widget);
     }
 
     function drawBrackets() {
 
       var viewport = editor.getViewport(),
           visibleStart = viewport.from,
-          visibleEnd = viewport.to;
+          visibleEnd = viewport.to,
+          stillToRender = [],
+          textHeight = editor.defaultTextHeight(),
+          brackets = [];
 
-      bracketContainer.find('.bracket').remove();
-      
       $(functions).each(function(i, fun) {
 
+        //addWidget(fun);
+        
+
+        // draw brackets
         var start = fun.from.line, end = fun.to.line;
         
         // not visible, don't bother to render it
-        if (end < visibleStart || start > visibleEnd)
+        if (end < visibleStart || start > visibleEnd) {
+          stillToRender.push(fun)
           return;
-
+        }
         var startOffset = editor.charCoords(fun.from, 'local').top,
             endOffset = editor.charCoords(fun.to, 'local').top;
             
@@ -144,20 +331,47 @@
           'class': 'bracket level' + fun.bindings.level()
         }).css({
           top: startOffset,
-          height: endOffset - startOffset + editor.defaultTextHeight()
+          height: endOffset - startOffset + textHeight
         });
-        fun.bracket = bracket.get();
-        bracketContainer.append(bracket);        
+        fun.data = {
+          bracket: bracket
+        }
+        brackets.push(bracket);
+        
       });
+      functions = stillToRender;
+
+      var bracketContainer = $('.CodeMirror-gutter.brackets');
+      bracketContainer.append.apply(bracketContainer, brackets);
     }
 
+
+    /**
+     * Todo: only mark identifiers in visible range
+     */
     function markIdentifier() {
+
+      var viewport = editor.getViewport(),
+          visibleStart = viewport.from,
+          visibleEnd = viewport.to,
+          stillToRender = [];
+
+      /*doc.eachLine(visibleStart,visibleEnd, function(line){
+        $(line.markedSpans).each(function(i, el) {
+          el.marker.clear();
+        });
+      });*/
+/*
       $(doc.getAllMarks()).each(function(i, el) { 
         el.clear();
       });
-
+*/
       $(identifiers).each(function(i, el) {
 
+        if (el.to.line < visibleStart || el.from.line > visibleEnd) {
+          stillToRender.push(el);
+          return
+        }
         var level = el.boundIn.level();
 
         // this is really ugly. Finding the marked identifier through a unique class...
@@ -167,8 +381,19 @@
           className: 'id level' + level + ' ' + id
         });
 
-        // connect the dom id to ast
-        el.className = id;
+        el.data = {
+          id: id,
+          mark: mark 
+        };
+
+
+        /*
+        listeners[id] = function(dom) {
+          //console.log("identifier has been created", dom, el);
+          $(dom).mouseenter(function() {
+            console.log("mouse enter on", dom, el);
+          })
+        }
 
         if (level !== 0) {
 
@@ -187,20 +412,22 @@
             });
 
             // highlight all bound instances
-            /*var other = $(el.boundIn.bindings[el.name].boundInstances).each(function(i, boundId) {
-              $('.level' + level + '.' + boundId.className).clearQueue().queue(function() {
-                $(this).addClass('highlight-bound');
-                $(this).dequeue();
-              }).delay(1500).queue(function() {
-                $(this).removeClass('highlight-bound');
-                $(this).dequeue();
-              });
-            });*/
+            // var other = $(el.boundIn.bindings[el.name].boundInstances).each(function(i, boundId) {
+            //   $('.level' + level + '.' + boundId.className).clearQueue().queue(function() {
+            //     $(this).addClass('highlight-bound');
+            //     $(this).dequeue();
+            //   }).delay(1500).queue(function() {
+            //     $(this).removeClass('highlight-bound');
+            //     $(this).dequeue();
+            //   });
+            // });
 
             return false;
           })
         }
+        */
       });
+      identifiers = stillToRender;
     }
 
 });

@@ -29,7 +29,7 @@ html, body {
   display: block;
   margin: 0;
   padding: 0;
-  line-height: 1.2em;
+  line-height: 1.3em;
   height: 100%;
 }
 .cm-s-monochrome div.CodeMirror-selected { background: $color-background-highlight !important; }
@@ -38,17 +38,17 @@ html, body {
 .cm-s-monochrome .CodeMirror-cursor { border-left: 1px solid white !important; }
 
 .cm-s-monochrome .cm-keyword { color: $color-text; font-weight: bold; }
-.cm-s-monochrome .cm-atom {color: $color-text-highlight; }
-.cm-s-monochrome .cm-number {color: $color-text-highlight; }
-.cm-s-monochrome .cm-def {color: $color-text-highlight; }
+.cm-s-monochrome .cm-atom {color: darken($color-text-highlight, 5%); }
+.cm-s-monochrome .cm-number {color: darken($color-text-highlight, 5%)}
+.cm-s-monochrome .cm-def {color: darken($color-text-highlight, 5%) }
 .cm-s-monochrome .cm-variable { color: $color-text; }
 .cm-s-monochrome .cm-variable-2 { color: $color-text; }
 .cm-s-monochrome .cm-variable-3 { color: $color-text; }
 .cm-s-monochrome .cm-property { color: $color-text; }
 .cm-s-monochrome .cm-operator {color: $color-text-hide; }
 .cm-s-monochrome .cm-comment {color: $color-text-hide; }
-.cm-s-monochrome .cm-string {color: $color-text-highlight; }
-.cm-s-monochrome .cm-string-2 {color: $color-text-highlight; }
+.cm-s-monochrome .cm-string {color: darken($color-text-highlight, 5%) }
+.cm-s-monochrome .cm-string-2 {color: darken($color-text-highlight, 5%) }
 .cm-s-monochrome .cm-meta {color: $color-text-hide;}
 .cm-s-monochrome .cm-error {color: #f00;}
 .cm-s-monochrome .cm-qualifier { color: $color-text; font-weight: bold; }
@@ -66,6 +66,18 @@ html, body {
   width: 25px;
   background: $color-background; 
   position: relative;
+}
+
+.vars-in-scope {
+  position: absolute;
+  background: mix($color-background-highlight, $color-background, 50%);
+  font-size: 0.6em;
+  border-radius: 4px;
+
+  .binding {
+    padding: 0 0.5em;
+  }
+
 }
 
 //.code {
@@ -150,6 +162,7 @@ html, body {
       
     }
 
+    &.level0 { border-bottom: 1px dashed $color-background-highlight; }
     &.level1 { color: $color-level1; }
     &.level2 { color: $color-level2; }
     &.level3 { color: $color-level3; }

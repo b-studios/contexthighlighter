@@ -3567,6 +3567,7 @@ window.CodeMirror = (function() {
     this.lines = [];
     this.type = type;
     this.doc = doc;
+    this.spans = [];
   }
   CodeMirror.TextMarker = TextMarker;
 
@@ -4226,7 +4227,10 @@ window.CodeMirror = (function() {
       var fullStyle = style || "";
       if (startStyle) fullStyle += startStyle;
       if (endStyle) fullStyle += endStyle;
-      return builder.pre.appendChild(elt("span", [content], fullStyle));
+
+      var span = elt("span", [content], fullStyle);
+      signal(builder.cm, "renderToken", span);
+      return builder.pre.appendChild(span);
     }
     builder.pre.appendChild(content);
   }
@@ -4270,6 +4274,7 @@ window.CodeMirror = (function() {
   function buildCollapsedSpan(builder, size, widget) {
     if (widget) {
       if (!builder.display) widget = widget.cloneNode(true);
+      signal(builder.cm, "renderToken", widget);
       builder.pre.appendChild(widget);
       if (builder.measure && size) {
         builder.measure[builder.pos] = widget;
