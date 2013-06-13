@@ -6,7 +6,8 @@ onmessage = function(e) {
     return;
 
   var ast = esprima.parse(e.data, {        
-    range: true
+    range: true,
+    tolerant: true
   });
 
   postMessage(ast);

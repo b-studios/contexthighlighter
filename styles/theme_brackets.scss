@@ -141,24 +141,24 @@ html, body {
   .id {
 
     //border: 1px solid transparent;
-    //border-radius: 3px;
-    -webkit-transition: border-color 1s;
-    -moz-transition: border-color 1s;
-    -o-transition: border-color 1s;
-    -ms-transition: border-color 1s;
-    transition: border-color 1s;
+    border-radius: 3px;
+    -webkit-transition: background-color 1s;
+    -moz-transition: background-color 1s;
+    -o-transition: background-color 1s;
+    -ms-transition: background-color 1s;
+    transition: background-color 1s;
 
     &.level1, &.level2, &.level3, &.level4, &.level5, &.level6, &.level7, &.level8̛ {
       cursor: help;
     }
 
     &.highlight-bound { 
-      border-color: $color-text-highlight;
-      -webkit-transition: border-color 0.4s;
-      -moz-transition: border-color 0.4s;
-      -o-transition: border-color 0.4s;
-      -ms-transition: border-color 0.4s;
-      transition: border-color 0.4s;
+      background-color: mix($color-background-highlight, $color-background, 30%);
+      -webkit-transition: background-color 0.4s;
+      -moz-transition: background-color 0.4s;
+      -o-transition: background-color 0.4s;
+      -ms-transition: background-color 0.4s;
+      transition: background-color 0.4s;
       
     }
 

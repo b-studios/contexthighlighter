@@ -25,7 +25,13 @@
  * @author Jonathan Brachthaeuser
  */
 /*global require:true */
-var bindingAnalyzer = (function() {
+
+// we are inside a worker
+if (typeof importScripts === 'function') {
+  importScripts('vendor/estraverse/estraverse.js');
+}
+
+var bindingAnalyzer = (function(global) {
 
   function performBindingAnalysis(ast, env) {
 
@@ -203,3 +209,22 @@ var bindingAnalyzer = (function() {
   return performBindingAnalysis;
 
 }).call(this);
+
+// TODO this currently raises a CLONE exception
+// this is due to the function inside of environment.
+// I have to strip out the functionality to just
+// transfer the data
+if (typeof importScripts !== undefined) {
+  onmessage = function(e) {
+
+    function Foo() {
+      this.bar = function() {
+
+
+      }
+    }
+
+    var result = bindingAnalyzer(e.data);
+    postMessage(new Foo)//
+  };
+}
