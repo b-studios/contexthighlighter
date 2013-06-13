@@ -148,10 +148,6 @@ html, body {
     -ms-transition: background-color 1s;
     transition: background-color 1s;
 
-    &.level1, &.level2, &.level3, &.level4, &.level5, &.level6, &.level7, &.level8̛ {
-      cursor: help;
-    }
-
     &.highlight-bound { 
       background-color: mix($color-background-highlight, $color-background, 30%);
       -webkit-transition: background-color 0.4s;
