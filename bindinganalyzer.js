@@ -24,14 +24,9 @@
  *
  * @author Jonathan Brachthaeuser
  */
-/*global require:true */
-
-// we are inside a worker
-if (typeof importScripts === 'function') {
-  importScripts('vendor/estraverse/estraverse.js');
-}
-
-var bindingAnalyzer = (function(global) {
+/*jslint vars: true, white: true */
+/*global estraverse: true */
+var bindingAnalyzer = (function (global) {
 
   function performBindingAnalysis(ast, env) {
 
@@ -41,7 +36,7 @@ var bindingAnalyzer = (function(global) {
       this.parent = parent;
       this.bindings = Object.create(null);
 
-      this.addBindingInstance = function(name, instance) {
+      this.addBindingInstance = function (name, instance) {
         if (this.bindings[name] === undefined) {
           this.bindings[name] = { bindingInstances: [], boundInstances: [] };
         }
@@ -49,93 +44,92 @@ var bindingAnalyzer = (function(global) {
         return this;
       };
 
-      this.addBoundInstance = function(name, instance) {
+      this.addBoundInstance = function (name, instance) {
         if (this.bindings[name] === undefined) {
           this.bindings[name] = { bindingInstances: [], boundInstances: [] };
-        }    
+        }
         this.bindings[name].boundInstances.push(instance);
         return this;
       };
 
-      this.hasBinding = function(name) {
+      this.hasBinding = function (name) {
         return this.bindings[name] !== undefined;
       };
 
-      this.findBindingEnv = function(name) {
-          
+      this.findBindingEnv = function (name) {
+
         if (this.bindings[name] !== undefined) {
           return this;
-        
-        } else if (this.parent !== undefined) {
+        }
+
+        if (this.parent !== undefined) {
           return this.parent.findBindingEnv(name);
-        
+        }
+
         // we are the global environment
-        } else {
-          this.bindings[name] = { bindingInstances: [], boundInstances: [] }
-          return this;
-        }        
+        this.bindings[name] = { bindingInstances: [], boundInstances: [] };
+        return this;
       };
 
-      this.level = function() {
-        if (this.parent === undefined) 
+      this.level = function () {
+        if (this.parent === undefined) {
           return 0;
-        
-        else
-          return this.parent.level() + 1;
+        }
+
+        return this.parent.level() + 1;
       };
     }
 
     var bindingInstanceAnalyzer = {
       env: undefined,
 
-      enter: function(node) {
+      enter: function (node) {
 
-        var env = this.visitor.env
+        var env = this.visitor.env, oldEnv, i;
 
-        switch (node.type) {        
+        switch (node.type) {
+          // don't analyze parameters!
           case 'FunctionDeclaration':
           case 'FunctionExpression':
 
             // create a new binding environment (function scope)
-            var oldEnv = env
+            oldEnv = env;
             env = this.visitor.env = new Environment(node, env);
             node.bindings = env;
             env.addBindingInstance('arguments', node);
 
-            if (node.type === 'FunctionDeclaration')
-              oldEnv.addBindingInstance(node.id.name, node.id)
+            if (node.type === 'FunctionDeclaration') {
+              oldEnv.addBindingInstance(node.id.name, node.id);
           
             // it's a named function expression
-            else if (!!node.id)
-              env.addBindingInstance(node.id.name, node.id)
-            
-            // the parameters are bound by the function
-            for (i = 0; i < node.params.length; i++)
-              env.addBindingInstance(node.params[i].name, node.params[i])
-            
+            } else if (!!node.id) {
+              env.addBindingInstance(node.id.name, node.id);
+            }
 
-            // don't analyze parameters!
+            // the parameters are bound by the function
+            for (i = 0; i < node.params.length; i++) {
+              env.addBindingInstance(node.params[i].name, node.params[i]);
+            }
             break;
-            
+
           case 'VariableDeclarator':
             env.addBindingInstance(node.id.name, node);
-            // don't analyze node.id
             break;
         }
       },
-      leave:  function(node) {
-        switch (node.type) {        
+      leave:  function (node) {
+        switch (node.type) {
           case 'FunctionDeclaration':
           case 'FunctionExpression':
-            this.visitor.env = this.visitor.env.parent
-            break;           
+            this.visitor.env = this.visitor.env.parent;
+            break;
         }
       }
-    }
+    };
 
     function analyzeBindingInstances(node, env) {
       var visitor = Object.create(bindingInstanceAnalyzer);
-      visitor.env = env
+      visitor.env = env;
       estraverse.traverse(node, visitor);
     }
 
@@ -145,19 +139,19 @@ var bindingAnalyzer = (function(global) {
 
       enter: function(node) {
 
-        var env = this.visitor.env;
+        var env = this.visitor.env, i;
 
         switch (node.type) {
 
           case 'Identifier':
             node.boundIn = env.findBindingEnv(node.name)
-                              .addBoundInstance(node.name, node)
+                              .addBoundInstance(node.name, node);
             break;
       
           case 'FunctionDeclaration':
-          case 'FunctionExpression':            
+          case 'FunctionExpression':
             for (i = 0; i < node.params.length; i++) {
-              node.params[i].boundIn = node.bindings
+              node.params[i].boundIn = node.bindings;
             }
             this.visitor.env = node.bindings;
             break;
@@ -177,54 +171,36 @@ var bindingAnalyzer = (function(global) {
             analyzeBoundInstances(node.object, env);
 
             // if it is computed, then also check bindings for the access expression
-            if (!node.computed)
+            if (!node.computed) {
               this.skip();
-            
+            }
             break;
         }
       },
       leave:  function(node) {
-        switch (node.type) {        
+        switch (node.type) {
           case 'FunctionDeclaration':
           case 'FunctionExpression':
-            this.visitor.env = this.visitor.env.parent
-            break;           
+            this.visitor.env = this.visitor.env.parent;
+            break;
         }
       }
-    }
+    };
+
     function analyzeBoundInstances(node, env) {
       var visitor = Object.create(boundInstanceAnalyzer);
-      visitor.env = env
+      visitor.env = env;
       estraverse.traverse(node, visitor);
     }
 
-    var globalEnv = env || new Environment(ast, undefined)
-    ast.scope_id = 'globalscope'
-    ast.bindings = globalEnv
-    analyzeBindingInstances(ast, globalEnv)
-    analyzeBoundInstances(ast, globalEnv)
+    var globalEnv = env || new Environment(ast, undefined);
+    ast.scope_id = 'globalscope';
+    ast.bindings = globalEnv;
+    analyzeBindingInstances(ast, globalEnv);
+    analyzeBoundInstances(ast, globalEnv);
     return ast;
   }
 
   return performBindingAnalysis;
 
 }).call(this);
-
-// TODO this currently raises a CLONE exception
-// this is due to the function inside of environment.
-// I have to strip out the functionality to just
-// transfer the data
-if (typeof importScripts !== undefined) {
-  onmessage = function(e) {
-
-    function Foo() {
-      this.bar = function() {
-
-
-      }
-    }
-
-    var result = bindingAnalyzer(e.data);
-    postMessage(new Foo)//
-  };
-}

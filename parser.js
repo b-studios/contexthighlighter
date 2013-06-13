@@ -1,54 +1,35 @@
+/**
+ * This file is part of "Context Highlighter".
+ *
+ * "Context Highlighter" is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
+ *
+ * "Context Highlighter" is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+ *
+ * You should have received a copy of the GNU General Public License
+ * along with "Context Highlighter".  If not, see <http://www.gnu.org/licenses/>.
+ *
+ * @author Jonathan Brachthaeuser
+ */
+/*jslint vars: true, newcap: true, undef: true */
+/*global esprima: true */
 importScripts('vendor/esprima/esprima.js');
 
-onmessage = function(e) {
+onmessage = function (e) {
 
-  if (e === undefined)
+  if (e === undefined) {
     return;
+  }
 
-  var ast = esprima.parse(e.data, {        
+  var ast = esprima.parse(e.data, {
     range: true,
     tolerant: true
   });
 
   postMessage(ast);
 };
-
-
-
-
-    /*
-    // If parse is called faster then it can finish the next parsing should be
-    // delayed a bit.
-     
-    var parser = new Worker('parser.js'),
-        pending = false, running = false,
-        lastParseTime = 0;
-    function parse(string, callback) {
-
-      console.log(lastParseTime)
-
-      // there already is a pending parse
-      if (pending) {
-        window.clearTimeout(pending);
-        pending = undefined;
-      }
-
-      // queue up
-      if (running) {
-        pending = window.setTimeout(function() {
-            pending = undefined;
-            parse(string, callback);
-        }, lastParseTime);
-      } else {
-        
-        var timeBefore = new Date();
-        parser.onmessage = function(result) {
-          lastParseTime = new Date() - timeBefore;
-          running = false;
-          callback.call(null, result);
-        }
-        running = true;
-        parser.postMessage(string);
-      }      
-    }
-    */
