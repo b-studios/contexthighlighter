@@ -38,11 +38,11 @@ $(function () {
 
   var doc = editor.getDoc();
 
-  $.get('bindinganalyzer.js', function (data) {
+  $.get('src/welcome.js', function (data) {
     doc.setValue(data);
   });
 
-  var parser = new Worker('parser.js'),
+  var parser = new Worker('src/parser.js'),
       running = false,
       cleanup = undefined;
 
@@ -64,7 +64,7 @@ $(function () {
       // outdated display-updates
       parser.terminate();
       // spawn a new one
-      parser = new Worker('parser.js');
+      parser = new Worker('src/parser.js');
       running = false;
     }
 

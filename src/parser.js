@@ -18,7 +18,7 @@
  */
 /*jslint vars: true, newcap: true, undef: true */
 /*global esprima: true */
-importScripts('vendor/esprima/esprima.js');
+importScripts('../lib/esprima/esprima.js');
 
 onmessage = function (e) {
 
