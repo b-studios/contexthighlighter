@@ -33,10 +33,10 @@ function markIdentifier(markedClass) {
   // colored in red. If you click (or navigate) inside of the name of a variable
   // (like `classes`) you can see a short highlight of all occurences of this
   // variable.
-  forAllSpans('id', function (i, el){
+  forAllSpans('id', function (i, el) {
     var classes = el.className.split(' ');
     
-    if (classes.indexOf(markedClass) == -1) {
+    if (classes.indexOf(markedClass) === -1) {
       classes.push(markedClass);
     }
     el.className = classes.join(' ');
@@ -47,11 +47,11 @@ function markIdentifier(markedClass) {
 var highlighter = (function (global) {
   
   return {
-    log: function(className) {
-      forAllSpans(className, function(i, el) {
+    log: function (className) {
+      forAllSpans(className, function (i, el) {
         console.log(el); 
-      });   
+      });
     },
     mark: markIdentifier
-  }
+  };
 }).call(this);
