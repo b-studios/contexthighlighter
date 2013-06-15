@@ -54,4 +54,4 @@ var highlighter = (function (global) {
     },
     mark: markIdentifier
   };
-}).call(this);
+}(this));
